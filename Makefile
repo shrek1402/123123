@@ -26,7 +26,7 @@ libBC:
 	ar rc libmyBigChars.a myBigChars.o
 
 libRK:
-	g++ -c $(CFLAGS) myReadkey.cpp -o myReadkey.o
+	g++ -c -std=c++17 myReadkey.cpp -o myReadkey.o
 	ar rc libmyReadkey.a myReadkey.o
 	g++ main.cpp libmyTerm.a libmyBigChars.a libmyReadkey.a
 
