@@ -1,4 +1,3 @@
-#pragma pack(push, 1)
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -111,7 +110,7 @@ RegisterOfFlags registrOfFlags;
 void sc_memoryInit() {
   for (size_t i = 0; i < NUMBERS_OF_CELLS; i++) {
     memory.at(i) = new Cell;
-    *memory.at(i) = 1;
+    *memory.at(i) = 0;
   }
 }
 
@@ -175,7 +174,8 @@ int sc_memoryLoad(const char* filename) {
 
   com temp;
   while (fil.read((char*)(&temp), sizeof(com))){
-      std::cout << temp.command << " ";
+    //*memory.at(temp.n) = temp.operand;  
+    sc_commandEncode(temp.command, temp.operand, memory.at(temp.n));
   }
   fil.close();
   return 0;
@@ -240,11 +240,13 @@ int sc_regGet(enumRegistrOfFlags nReg, int* value) {
 то функция завершается с ошибкой.В этом случае
 значение value не изменяется*/
 int sc_commandEncode(int command, int operand, Cell* cell) {
-
+  if(command == 80){ // '='
+  	*cell = operand * -1;
+  } else{
   *cell = ~bit_recognize_comand;
   *cell &= command;
   *cell &= operand;
-  
+  }
   return 0;
 }
 
@@ -261,10 +263,6 @@ int sc_commandDecode(Cell cell, int* command, int* operand) {
   }
   return 0;
 }
-
-
-
-#pragma pack(pop)
 
 
 

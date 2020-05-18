@@ -30,12 +30,12 @@ void printMainTable();
 void printCell(colors color, Cell_coord cell_coord){
   mt_setbgcolor(color);
   mt_gotoXY(cell_coord.y+2,(cell_coord.x)*6+2);
-  if (*memory.at((cell_coord.y)*10 + cell_coord.x) >= 0){
+  if (*memory.at((cell_coord.x)*10 + cell_coord.y) >= 0){
     std::cout << "+" << std::setfill('0') << std::setw(4) 
-            << *memory.at((cell_coord.y)*10 + cell_coord.x);
+            << *memory.at((cell_coord.x)*10 + cell_coord.y);
   } else {
     std::cout << "-" << std::setfill('0') << std::setw(4) 
-            << (*memory.at((cell_coord.y)*10 + cell_coord.x)) * -1;
+            << (*memory.at((cell_coord.x)*10 + cell_coord.y)) * -1;
   }
   mt_setbgcolor (STANDART);
 }
@@ -116,7 +116,7 @@ void printMainTable(){
     }
   }
 
-  int16_t temp = *memory.at((cell_coord.y)*10 + cell_coord.x);
+  int16_t temp = *memory.at((cell_coord.x)*10 + cell_coord.y);
   if(temp >= 0){
     bc_printbigchar(num[10], 2, 14, CIAN, STANDART);
   }else{
@@ -170,7 +170,7 @@ int main() {
   registrOfFlags.ignoring_clock_pulses = 1;
 
   sc_memoryInit();
-
+  
   sc_memoryLoad("sat.o");
   printMainTable();
 
@@ -193,26 +193,26 @@ while(KEY != enter){
     
     switch (KEY) {
       case up: if(cell_coord.y > 0){
-	    	   printCell(STANDART, cell_coord);
         	   cell_coord.y--;
+	    	   printMainTable();
 	           printCell(CIAN, cell_coord); }
       break;
 
       case down: if(cell_coord.y < 9){
-	    		 printCell(STANDART, cell_coord);
         		 cell_coord.y++;
+				 printMainTable();
 	    		 printCell(CIAN, cell_coord); }
 	  break;
 
       case ::left: if(cell_coord.x > 0){
-	    		 printCell(STANDART, cell_coord);
         		 cell_coord.x--;
+	    	     printMainTable();
 	    		 printCell(CIAN, cell_coord); }
 	  break;
 
       case ::right: if(cell_coord.x < 9){
-	    		  printCell(STANDART, cell_coord);
         		  cell_coord.x++;
+	    	      printMainTable();
 	    		  printCell(CIAN, cell_coord); }
 	  break;
 
@@ -244,13 +244,13 @@ while(KEY != enter){
 	  case step:
 		if(instructionCounter < 99){
 		  instructionCounter++;
-          printCell(STANDART, cell_coord);
 		  if(cell_coord.y % 9 != 0 || cell_coord.y == 0){
 		    cell_coord.y++;
   		  } else {
 			cell_coord.y = 0;
 		    cell_coord.x++;
 		  }
+	      printMainTable();
 		  printCell(CIAN, cell_coord);
 		}
 
