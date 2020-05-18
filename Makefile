@@ -18,11 +18,11 @@ clear:
 	clear
 
 lib: 
-	g++ -c myTerm.cpp -o myTerm.o
+	g++ -c -std=c++17 myTerm.cpp -o myTerm.o
 	ar rc libmyTerm.a myTerm.o
 
 libBC: 
-	g++ -c myBigChars.cpp -o myBigChars.o
+	g++ -c -std=c++17 myBigChars.cpp -o myBigChars.o
 	ar rc libmyBigChars.a myBigChars.o
 
 libRK:
