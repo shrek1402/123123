@@ -54,7 +54,7 @@ typedef int16_t Cell;
 constexpr auto NUMBERS_OF_CELLS = 100;
 constexpr auto SIZE_CELL = sizeof(Cell);
 extern uint64_t instructionCounter = 0; // TODO: придумать, куда убрать
-extern uint64_t accumulator = 0;
+extern int64_t accumulator = 0;
 
 uint8_t bit1 = 0x01;  // восьмиричный литерал для 0000 0001
 uint8_t bit2 = 0x02;  // восьмиричный литерал для 0000 0010
@@ -86,6 +86,8 @@ uint16_t bit_opcode = bit14 + bit13 + bit12 + bit11 + bit10 + bit9 + bit8;
  // шестнадцатеричный литерал для 0000 0000 0111 1111
 uint8_t bit_operand = bit7 + bit6 + bit5 + bit4 + bit3 + bit2 + bit1;  
 
+uint16_t bit_all = bit_opcode + bit_operand;
+
 
 void sc_memoryInit();
 int sc_memorySet(int address, int value);
@@ -93,7 +95,7 @@ int sc_memoryGet(int address, int* value);
 int sc_memorySave(const char* filename);
 int sc_memoryLoad(const char* filename);
 int sc_regInit(void);
-int sc_regSet(enumRegistrOfFlags nReg, int value);
+int sc_regSet(enumRegistrOfFlags nReg, int value);//1100011
 int sc_regGet(enumRegistrOfFlags nReg, int* value);
 int sc_commandEncode(int command, int operand, Cell* cell);
 int sc_commandDecode(Cell cell, int* command, int* operand);
@@ -174,7 +176,12 @@ int sc_memoryLoad(const char* filename) {
 
   com temp;
   while (fil.read((char*)(&temp), sizeof(com))){
-    //*memory.at(temp.n) = temp.operand;  
+    //*memory.at(temp.n) = temp.operand;
+	if(temp.command == 80){
+		uint16_t value = (bit_recognize_comand | temp.operand); // RAVNO TODO !
+		*memory.at(temp.n) = value;
+	}
+	else
     sc_commandEncode(temp.command, temp.operand, memory.at(temp.n));
   }
   fil.close();
@@ -241,11 +248,15 @@ int sc_regGet(enumRegistrOfFlags nReg, int* value) {
 значение value не изменяется*/
 int sc_commandEncode(int command, int operand, Cell* cell) {
   if(command == 80){ // '='
-  	*cell = operand * -1;
-  } else{
-  *cell = ~bit_recognize_comand;
-  *cell &= command;
-  *cell &= operand;
+  	*cell = bit_recognize_comand || operand;
+  } else if ( command == 10 || command == 11 || command == 20 || 
+		  	  command == 21 || command == 30 || command == 31 || 
+			  command == 32 || command == 33 || command == 40 || 
+			  command == 41 || command == 42 || command == 43 || command == 67){
+  uint16_t temp_c = ~bit_recognize_comand;
+  temp_c &= ((command << 7) & bit_opcode);
+  temp_c |= operand;
+  *cell = temp_c;
   }
   return 0;
 }
@@ -254,8 +265,10 @@ int sc_commandEncode(int command, int operand, Cell* cell) {
 Если декодирование невозможно, то устанавливается флаг
 «ошибочная команда» и функция завершается с ошибкой*/
 int sc_commandDecode(Cell cell, int* command, int* operand) {
-  *command = cell & bit_opcode;
+  *command = (cell & bit_opcode) >> 7;
   *operand = cell & bit_operand;
+	if (*command == 43)
+		exit(0);
   if (cell & bit_recognize_comand == 1){
     registrOfFlags.incorrect_command = 1;
     registrOfFlags.ignoring_clock_pulses = 1;

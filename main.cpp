@@ -9,6 +9,77 @@ struct Cell_coord{
   uint8_t y = 0;
 }cell_coord, temp_coord;
 
+int CU (void);
+void printCell(colors color, Cell_coord cell_coord);
+void printMainTable();
+
+int READ(int nCell){ // 10 Ввод с терминала в указанную ячейку памяти с контролем переполнения
+
+  uint16_t value = (bit_recognize_comand | 5); // RAVNO TODO !
+  *memory.at(nCell) = value;
+  
+  return 0;
+}
+
+void WRITE(int nCell){ // 11 Вывод на терминал значения указанной ячейки памяти
+  int temp;
+  sc_memoryGet(nCell, &temp);
+  mt_gotoXY(23,1);
+  std::cout << temp;
+}
+
+void LOAD(int nCell){ // 20 Загрузка в аккумулятор значения из указанного адреса памяти
+  accumulator = *memory.at(nCell) & bit_operand;
+}
+
+void STORE(int nCell){ // 21 Выгрузка значения из аккумулятора по указанному адресу памяти
+  *memory.at(nCell) = accumulator | bit_recognize_comand;
+}
+
+void ADD(int nCell){ // 30 Выполняет сложение слова в аккумуляторе и слова из указанной ячейки памяти(результат в аккумуляторе)
+  accumulator += *memory.at(nCell);
+}
+
+void SUB(int nCell){ // 31 Вычитает из слова в аккумуляторе слово из указанной ячейки памяти(результат в аккумуляторе)
+  accumulator -= *memory.at(nCell) & bit_operand;
+}
+
+void DIVIDE(int nCell){ // 32 Выполняет деление слова в аккумуляторе на слово из указанной ячейки памяти(результат в аккумуляторе)
+  accumulator /= *memory.at(nCell);
+}
+
+void MUL(int nCell){ // 33 Вычисляет произведение слова в аккумуляторе на слово из указанной ячейки памяти(результат в аккумуляторе)
+  accumulator *=*memory.at(nCell) & bit_operand;
+}
+
+void JUMP(int nCell){ // 40 Переход к указанному адресу памяти
+  cell_coord.x = nCell / 10;
+  cell_coord.y = nCell % 10;
+  instructionCounter = nCell;
+}
+
+void JNEG(int nCell){ // 41 Переход к указанному адресу памяти, если в аккумуляторе находится отрицательное число
+  if (accumulator < 0)
+    instructionCounter = nCell;
+}
+
+void JZ(int nCell){ // 42 Переход к указанному адресу памяти, если в аккумуляторе находится нуль
+  if (accumulator == 0){
+    cell_coord.x = nCell / 10;
+    cell_coord.y = nCell % 10;
+    instructionCounter = nCell;
+  }
+}
+
+void HALT(){ // 43 Останов, выполняется при завершении работы программы
+  exit(0);
+}
+
+void LOGLC(int nCell){ // 67 Логический двоичный сдвиг содержимого указанного участка памяти влево на количество разрядов, указанное в аккумуляторе (результат в аккумуляторе)
+  accumulator = *memory.at(nCell) << accumulator;
+}
+
+
 extern std::vector <uint64_t> num = {
 0xFFC3C3C3C3C3C3FF,
 0x187818181818187E,
@@ -25,17 +96,17 @@ extern std::vector <uint64_t> num = {
 };
 
 
-void printMainTable();
+
 
 void printCell(colors color, Cell_coord cell_coord){
   mt_setbgcolor(color);
   mt_gotoXY(cell_coord.y+2,(cell_coord.x)*6+2);
-  if (*memory.at((cell_coord.x)*10 + cell_coord.y) >= 0){
+  if ((*memory.at((cell_coord.x)*10 + cell_coord.y) & bit_recognize_comand) != bit_recognize_comand){
     std::cout << "+" << std::setfill('0') << std::setw(4) 
             << *memory.at((cell_coord.x)*10 + cell_coord.y);
   } else {
     std::cout << "-" << std::setfill('0') << std::setw(4) 
-            << (*memory.at((cell_coord.x)*10 + cell_coord.y)) * -1;
+            << (*memory.at((cell_coord.x)*10 + cell_coord.y));
   }
   mt_setbgcolor (STANDART);
 }
@@ -66,6 +137,7 @@ void sigHandler(int sigNum){
 			cell_coord.y = 0;
 		    cell_coord.x++;
 		  }
+		  CU();
           printMainTable();
 		  printCell(CIAN, cell_coord);
 		}
@@ -85,6 +157,8 @@ void printMainTable(){
   bc_box(62,1,19,3); //Рамка аккумулятора
   mt_gotoXY(1,66);
   std::cout << "Accumulator";
+  mt_gotoXY(2,70);
+  std::cout << accumulator;
 
   bc_box(62,4,19,3); //Рамка инструкция
   mt_gotoXY(4,63);
@@ -93,6 +167,9 @@ void printMainTable(){
   bc_box(62,7,19,3); //Рамка код операции
   mt_gotoXY(7,67);
   std::cout << "Operation";
+  mt_gotoXY(8,70);
+  int16_t a = *memory.at(instructionCounter);
+  std::cout << ((a & bit_opcode) >> 7);
 
   bc_box(62,10,19,3); //Рамка флагов
   mt_gotoXY(10,69);
@@ -152,14 +229,44 @@ void printMainTable(){
   std::cout << "F6 - instruction counter";
 }
 
-int ALU (int opcode, int operand){
+int ALU (int command, int operand){
+	if (command == 10)
+		READ(operand);
+	if (command == 11)
+		WRITE(operand);
+
+	if (command == 20)
+		LOAD(operand);
+	if (command == 21)
+
+		STORE(operand);
+	if (command == 30)
+		ADD(operand);
+	if (command == 31)
+		SUB(operand);
+	if (command == 32)
+		DIVIDE(operand);
+	if (command == 33)
+		MUL(operand);
+
+	if (command == 40)
+		JUMP(operand);
+	if (command == 41)
+		JNEG(operand);
+	if (command == 42)
+		JZ(operand);
+	if (command == 43)
+		HALT();
+
+	if (command == 67)
+		LOGLC(operand);
 
   return 0;
 }
 
 int CU (void){
 int command, operand;
-  sc_commandDecode(*memory.at(instructionCounter), &command, &operand);
+  sc_commandDecode(*memory.at(instructionCounter-1), &command, &operand);
   ALU(command, operand);
 }
 
@@ -234,15 +341,15 @@ while(KEY != enter){
 		break;
 
       case reset:
-      	beginVal.it_value.tv_sec = 2;
+      	beginVal.it_value.tv_sec = 1;
 		beginVal.it_value.tv_usec = 500;
-		beginVal.it_interval.tv_sec = 2;
+		beginVal.it_interval.tv_sec = 1;
 		beginVal.it_interval.tv_usec = 500;
 		setitimer (ITIMER_REAL, &beginVal, &endVal);
 		break;
 
 	  case step:
-		if(instructionCounter < 99){
+		if (instructionCounter < 99){
 		  instructionCounter++;
 		  if(cell_coord.y % 9 != 0 || cell_coord.y == 0){
 		    cell_coord.y++;
@@ -250,7 +357,8 @@ while(KEY != enter){
 			cell_coord.y = 0;
 		    cell_coord.x++;
 		  }
-	      printMainTable();
+		  CU();
+          printMainTable();
 		  printCell(CIAN, cell_coord);
 		}
 
@@ -285,70 +393,3 @@ while(KEY != enter){
 /////////////////////////////////////////
 
 
-int READ(int nCell){ // 10 Ввод с терминала в указанную ячейку памяти с контролем переполнения
-  if (nCell > 99 || nCell < 0){
-	return -1;
-  }
-
-  rk_mytermregime ();
-  mt_gotoXY(23,1);
-  int code;
-  std::cin >> code;
-  if (code > 9999 || code < 9999)
-	return -1;
-  sc_memorySet(nCell, code); 
-  return 0;
-}
-
-void WRITE(int nCell){ // 11 Вывод на терминал значения указанной ячейки памяти
-  int temp;
-  sc_memoryGet(nCell, &temp);
-  mt_gotoXY(23,1);
-  std::cout << temp;
-}
-
-void LOAD(int nCell){ // 20 Загрузка в аккумулятор значения из указанного адреса памяти
-  accumulator = *memory.at(nCell);
-}
-
-void STORE(int nCell){ // 21 Выгрузка значения из аккумулятора по указанному адресу памяти
-  *memory.at(nCell) = accumulator;
-}
-
-void ADD(int nCell){ // 30 Выполняет сложение слова в аккумуляторе и слова из указанной ячейки памяти(результат в аккумуляторе)
-  accumulator += *memory.at(nCell);
-}
-
-void SUB(int nCell){ // 31 Вычитает из слова в аккумуляторе слово из указанной ячейки памяти(результат в аккумуляторе)
-  accumulator -= *memory.at(nCell);
-}
-
-void DIVIDE(int nCell){ // 32 Выполняет деление слова в аккумуляторе на слово из указанной ячейки памяти(результат в аккумуляторе)
-  accumulator /= *memory.at(nCell);
-}
-
-void MUL(int nCell){ // 33 Вычисляет произведение слова в аккумуляторе на слово из указанной ячейки памяти(результат в аккумуляторе)
-  accumulator *= *memory.at(nCell);
-}
-
-void JUMP(int nCell){ // 40 Переход к указанному адресу памяти
-  instructionCounter = nCell;
-}
-
-void JNEG(int nCell){ // 41 Переход к указанному адресу памяти, если в аккумуляторе находится отрицательное число
-  if (accumulator < 0)
-    instructionCounter = nCell;
-}
-
-void JZ(int nCell){ // 42 Переход к указанному адресу памяти, если в аккумуляторе находится нуль
-  if (accumulator == 0)
-    instructionCounter = nCell;
-}
-
-void HALT(){ // 43 Останов, выполняется при завершении работы программы
-
-}
-
-void LOGLC(int nCell){ // 67 Логический двоичный сдвиг содержимого указанного участка памяти влево на количество разрядов, указанное в аккумуляторе (результат в аккумуляторе)
-  accumulator = *memory.at(nCell) << accumulator;
-}
